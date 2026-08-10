@@ -1,5 +1,3 @@
-import 'dart:html';
-
 import 'package:flutter/material.dart';
 
 void main() {
@@ -10,45 +8,95 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
+
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
           title: Text("Responsive UI"),
-          actions: [
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "Home",
-                style: TextStyle(color: Colors.black),
-              ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "About",
-                style: TextStyle(color: Color(0xff141414)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "Services",
-                style: TextStyle(color: Color(0xff111010)),
-              ),
-            ),
-            TextButton(
-              onPressed: () {},
-              child: Text(
-                "Contact",
-                style: TextStyle(color: Color(0xff3d3a3a)),
-              ),
-            ),
-          ],
+
+          // Desktop menu
+          actions: width >= 600
+              ? [
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      "Home",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      "About",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      "Services",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      "Contact",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+                ]
+
+              // Mobile 3-dot menu
+              : [
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: Colors.black,
+                    ),
+                    onSelected: (String value) {
+                      if (value == "Home") {
+                        print("Home clicked");
+                      } else if (value == "About") {
+                        print("About clicked");
+                      } else if (value == "Services") {
+                        print("Services clicked");
+                      } else if (value == "Contact") {
+                        print("Contact clicked");
+                      }
+                    },
+                    itemBuilder: (BuildContext context) {
+                      return [
+                        PopupMenuItem<String>(
+                          value: "Home",
+                          child: Text("Home"),
+                        ),
+                        PopupMenuItem<String>(
+                          value: "About",
+                          child: Text("About"),
+                        ),
+                        PopupMenuItem<String>(
+                          value: "Services",
+                          child: Text("Services"),
+                        ),
+                        PopupMenuItem<String>(
+                          value: "Contact",
+                          child: Text("Contact"),
+                        ),
+                      ];
+                    },
+                  ),
+                ],
         ),
         body: Container(
+          width: double.infinity,
+          height: double.infinity,
           decoration: BoxDecoration(
             image: DecorationImage(
-              image: AssetImage("assets/images/Background.webp"),
+              image: AssetImage(
+                "assets/images/Background.webp",
+              ),
               fit: BoxFit.cover,
             ),
           ),
