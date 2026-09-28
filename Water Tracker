@@ -4,18 +4,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   runApp(const WaterTrackerApp());
 }
-
-// ======================================================
-// MAIN APP
-// ======================================================
-
 class WaterTrackerApp extends StatelessWidget {
   const WaterTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
+      debugShowCheckedModeBanner: true,
       title: 'Smart Water Tracker',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -25,10 +20,6 @@ class WaterTrackerApp extends StatelessWidget {
     );
   }
 }
-
-// ======================================================
-// HOME SCREEN
-// ======================================================
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -321,10 +312,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 25),
 
-              // ==================================================
-              // INFORMATION CARDS
-              // ==================================================
-
               Row(
                 children: [
                   // Remaining
@@ -393,10 +380,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 25),
 
-              // ==================================================
-              // ADD WATER
-              // ==================================================
-
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -446,10 +429,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 15),
 
-              // ==================================================
-              // QUICK ADD BUTTONS
-              // ==================================================
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -474,10 +453,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 25),
 
-              // ==================================================
-              // RESET BUTTON
-              // ==================================================
-
               OutlinedButton.icon(
                 onPressed: resetWater,
                 icon: const Icon(
@@ -495,10 +470,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 20),
-
-              // ==================================================
-              // COMPLETION MESSAGE
-              // ==================================================
 
               if (waterConsumed >= dailyGoal)
                 const Text(
@@ -532,9 +503,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ======================================================
-// GOAL SCREEN
-// ======================================================
 
 class GoalScreen extends StatefulWidget {
   final int currentGoal;
@@ -559,10 +527,6 @@ class _GoalScreenState extends State<GoalScreen> {
       text: widget.currentGoal.toString(),
     );
   }
-
-  // ======================================================
-  // SAVE GOAL
-  // ======================================================
 
   Future<void> saveGoal() async {
     String input = goalController.text.trim();
