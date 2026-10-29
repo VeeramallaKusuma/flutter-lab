@@ -1,0 +1,499 @@
+
+import 'package:flutter/material.dart';
+
+void main() => runApp(const ZeroHungerApp());
+
+const green = Color(0xFF2E7D32);
+
+class ZeroHungerApp extends StatelessWidget {
+  const ZeroHungerApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Zero Hunger Food Donation',
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: green),
+          scaffoldBackgroundColor: const Color(0xFFF4F7F2),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.all(16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ),
+        home: const FoodDonationPage(),
+      );
+}
+
+class FoodDonationPage extends StatefulWidget {
+  const FoodDonationPage({super.key});
+
+  @override
+  State<FoodDonationPage> createState() => _FoodDonationPageState();
+}
+
+class _FoodDonationPageState extends State<FoodDonationPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _food = TextEditingController();
+  final _quantity = TextEditingController();
+  final _address = TextEditingController();
+
+  final _categories = [
+    'Cooked Food',
+    'Fruits and Vegetables',
+    'Packaged Food',
+    'Bakery Items',
+    'Other',
+  ];
+
+  String? _category;
+  DateTime? _date;
+  TimeOfDay? _time;
+  bool _foodSafe = false, _submitting = false;
+
+  void _message(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+      ));
+  }
+
+  String? _required(String? value) =>
+      value == null || value.trim().isEmpty
+          ? 'This field is required.'
+          : null;
+
+  String? _validatePhone(String? value) =>
+      RegExp(r'^[6-9][0-9]{9}$').hasMatch(value?.trim() ?? '')
+          ? null
+          : 'Enter a valid 10-digit Indian mobile number.';
+
+  String? _validateQuantity(String? value) {
+    final n = int.tryParse(value?.trim() ?? '');
+    return n != null && n > 0 && n <= 100000
+        ? null
+        : 'Enter a quantity between 1 and 100000.';
+  }
+
+  Widget _field(
+    String label,
+    String hint,
+    IconData icon,
+    TextEditingController controller, {
+    String? Function(String?)? validator,
+    TextInputType keyboard = TextInputType.text,
+    int lines = 1,
+  }) =>
+      TextFormField(
+        controller: controller,
+        keyboardType: keyboard,
+        maxLines: lines,
+        validator: validator ?? _required,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: Colors.green.shade700),
+        ),
+      );
+
+  Widget _section(String title, IconData icon) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Row(children: [
+          Icon(icon, color: Colors.green.shade800, size: 24),
+          const SizedBox(width: 8),
+          Text(title,
+              style:
+                  const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+        ]),
+      );
+
+  Widget _picker(String label, String value, IconData icon, VoidCallback tap) =>
+      InkWell(
+        onTap: tap,
+        borderRadius: BorderRadius.circular(12),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: Icon(icon, color: Colors.green.shade700),
+          ),
+          child: Text(value),
+        ),
+      );
+
+  Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _date ?? DateUtils.dateOnly(now),
+      firstDate: DateUtils.dateOnly(now),
+      lastDate: DateTime(now.year + 1),
+      helpText: 'Select Pickup Date',
+    );
+
+    if (selected != null && mounted) {
+      setState(() {
+        _date = selected;
+        _time = null;
+      });
+    }
+  }
+
+  Future<void> _selectTime() async {
+    if (_date == null) {
+      _message('Please select the pickup date first.');
+      return;
+    }
+
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _time ?? TimeOfDay.now(),
+      helpText: 'Select Pickup Time',
+    );
+    if (selected == null || !mounted) return;
+
+    final pickup = DateTime(
+      _date!.year, _date!.month, _date!.day,
+      selected.hour, selected.minute,
+    );
+
+    if (!pickup.isAfter(DateTime.now())) {
+      _message('Pickup must be scheduled for a future date and time.');
+      return;
+    }
+    setState(() => _time = selected);
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    FocusScope.of(context).unfocus();
+
+    if (!_formKey.currentState!.validate()) return;
+    if (_category == null) {
+      _message('Please select a food category.');
+      return;
+    }
+    if (_date == null || _time == null) {
+      _message('Please select the pickup date and time.');
+      return;
+    }
+
+    final pickup = DateTime(
+      _date!.year, _date!.month, _date!.day,
+      _time!.hour, _time!.minute,
+    );
+    if (!pickup.isAfter(DateTime.now())) {
+      setState(() => _time = null);
+      _message('Pickup time has passed. Please select a new time.');
+      return;
+    }
+    if (!_foodSafe) {
+      _message('Please confirm that the food is safe for consumption.');
+      return;
+    }
+
+    final dateText =
+        '${_date!.day.toString().padLeft(2, '0')}/'
+        '${_date!.month.toString().padLeft(2, '0')}/'
+        '${_date!.year}';
+
+    final details = [
+      ['Donor', _name.text.trim()],
+      ['Phone', _phone.text.trim()],
+      ['Food', _food.text.trim()],
+      ['Category', _category!],
+      ['Quantity', '${_quantity.text.trim()} servings'],
+      ['Pickup Date', dateText],
+      ['Pickup Time', _time!.format(context)],
+      ['Address', _address.text.trim()],
+    ];
+
+    setState(() => _submitting = true);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20)),
+        icon: const Icon(Icons.check_circle, color: Colors.green, size: 52),
+        title: const Text('Donation Submitted!',
+            textAlign: TextAlign.center),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Thank you for supporting Zero Hunger! '
+                'Your contribution can help feed people in need '
+                'and reduce food waste.',
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              ...details.map((item) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 95,
+                          child: Text('${item[0]}:',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                        Expanded(child: Text(item[1])),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'ZERO HUNGER\nTogether, we can work towards a world '
+                  'where everyone has access to safe and nutritious food.',
+                  style: TextStyle(color: green, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    _clearForm();
+    setState(() => _submitting = false);
+  }
+
+  Future<void> _confirmReset() async {
+    if (_submitting) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Reset Form?'),
+        content: const Text(
+            'Are you sure you want to clear all entered information?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      _clearForm();
+      _message('Form cleared successfully.');
+    }
+  }
+
+  void _clearForm() {
+    for (final c in [_name, _phone, _food, _quantity, _address]) {
+      c.clear();
+    }
+    setState(() {
+      _category = null;
+      _date = null;
+      _time = null;
+      _foodSafe = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_name, _phone, _food, _quantity, _address]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          backgroundColor: green,
+          foregroundColor: Colors.white,
+          title: const Text('Food Donation',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: [
+            IconButton(
+              tooltip: 'Reset Form',
+              onPressed: _submitting ? null : _confirmReset,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(18),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: green,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Column(children: [
+                      Icon(Icons.volunteer_activism,
+                          color: Colors.white, size: 52),
+                      SizedBox(height: 12),
+                      Text('ZERO HUNGER',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                      SizedBox(height: 8),
+                      Text(
+                        'Share surplus food. Fight hunger. '
+                        'Make every meal count.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 15),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 24),
+                  _section('Donor Details', Icons.person),
+                  _field('Full Name', 'Enter your full name',
+                      Icons.person_outline, _name),
+                  const SizedBox(height: 14),
+                  _field('Mobile Number', '10-digit Indian mobile number',
+                      Icons.phone, _phone,
+                      validator: _validatePhone,
+                      keyboard: TextInputType.phone),
+                  const SizedBox(height: 24),
+                  _section('Food Details', Icons.restaurant),
+                  _field('Food Name', 'e.g. Rice, Chapati, Fruits',
+                      Icons.fastfood, _food),
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<String>(
+                    value: _category,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Food Category',
+                      prefixIcon: Icon(Icons.category),
+                    ),
+                    items: _categories
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .toList(),
+                    onChanged: _submitting
+                        ? null
+                        : (value) => setState(() => _category = value),
+                    validator: (value) =>
+                        value == null ? 'Please select a food category.' : null,
+                  ),
+                  const SizedBox(height: 14),
+                  _field('Quantity (Servings)', 'Enter a positive whole number',
+                      Icons.scale, _quantity,
+                      validator: _validateQuantity,
+                      keyboard: TextInputType.number),
+                  const SizedBox(height: 24),
+                  _section('Pickup Details', Icons.local_shipping),
+                  _picker(
+                    'Pickup Date',
+                    _date == null
+                        ? 'Select pickup date'
+                        : '${_date!.day.toString().padLeft(2, '0')}/'
+                            '${_date!.month.toString().padLeft(2, '0')}/'
+                            '${_date!.year}',
+                    Icons.calendar_month,
+                    _submitting ? () {} : _selectDate,
+                  ),
+                  const SizedBox(height: 14),
+                  _picker('Pickup Time',
+                      _time?.format(context) ?? 'Select pickup time',
+                      Icons.access_time, _submitting ? () {} : _selectTime),
+                  const SizedBox(height: 14),
+                  _field('Pickup Address', 'Enter the complete pickup address',
+                      Icons.location_on, _address, lines: 3),
+                  const SizedBox(height: 16),
+                  Card(
+                    color: Colors.white,
+                    child: CheckboxListTile(
+                      value: _foodSafe,
+                      onChanged: _submitting
+                          ? null
+                          : (value) =>
+                              setState(() => _foodSafe = value ?? false),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: const Text('Food Safety Confirmation',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: const Text(
+                        'I confirm that the food is suitable for consumption, '
+                        'properly stored, and not spoiled.',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 54,
+                    child: FilledButton.icon(
+                      onPressed: _submitting ? null : _submit,
+                      icon: const Icon(Icons.volunteer_activism),
+                      label: Text(
+                        _submitting ? 'Submitting...' : 'Submit Donation',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: green,
+                          foregroundColor: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _submitting ? null : _confirmReset,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Reset Form'),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Center(
+                    child: Text('ZERO HUNGER • Food for Everyone',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: green, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+}
